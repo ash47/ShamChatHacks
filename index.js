@@ -127,6 +127,12 @@ function doit() {
         // Grab it
         var div = windows[window];
 
+        if(!div) {
+            console.log('Failed to find window: '+window);
+            console.log(msg);
+            return;
+        }
+
         // Scroll detection
         var shouldScroll = false;
         if(div.scrollTop() + div.innerHeight() + 10 >= div.prop('scrollHeight')) {
@@ -261,7 +267,7 @@ function doit() {
             log((characterMap[clientID] ? (' (' + characterMap[clientID] + ')') : '') + ': ' + g.data + '<br>');
 
             if(listenToID[clientID]) {
-                log(clickableID2(clientID), clientID);
+                log(clickableID2(clientID), listenToID[clientID]);
                 log((characterMap[clientID] ? (' (' + characterMap[clientID] + ')') : '') + ': ' + g.data + '<br>', listenToID[clientID]);
             }
 
