@@ -13,12 +13,22 @@ var newHead = '<style>\
     top: 4px;\
     border: 1px solid #000;\
     background: #fff7ee;\
+    padding:4px;\
+}\
+\
+#chat {\
+    position: absolute;\
+    right: 32px;\
+    bottom: 4px;\
+    border: 1px solid #000;\
+    padding: 4px;\
 }\
 </style>';
 
 var newRoot = '\
 <div id="msgLog" class="mainContainer"></div>\
-<div id="windowSelector"><h4>Windows</h4></div>';
+<div id="windowSelector"><b>Windows</b><br></div>\
+<div id="chat"></div>';
 
 // Ensure we have jquery
 var jQuery = null;
@@ -51,6 +61,29 @@ function doit() {
     jQuery(document.documentElement).html(newRoot);
     jQuery('body').append(newHead);
 
+    var chat = jQuery('#chat');
+    chat.append(jQuery('<input>').attr('type','input').attr('id', 'chatClientID'));
+    chat.append(jQuery('<input>').attr('type','input').attr('id', 'chatClientMSG').on('keydown', function(e) {
+        if (e.which == 13) {
+            var toSend = jQuery('#chatClientID').val();
+            var msg = jQuery('#chatClientMSG').val();
+            jQuery('#chatClientMSG').val('');
+
+            if(msg != '') {
+                sendMessage(toSend, msg);
+            }
+        }
+    }));
+    chat.append(jQuery('<input>').attr('type','submit').click(function() {
+        var toSend = jQuery('#chatClientID').val();
+        var msg = jQuery('#chatClientMSG').val();
+        jQuery('#chatClientMSG').val('');
+
+        if(msg != '') {
+            sendMessage(toSend, msg);
+        }
+    }));
+
     // Load a client
     $(document.body).grab(new Element("iframe", {
         src: "http://" + server + "/iframe.html",
@@ -76,6 +109,7 @@ function doit() {
         }
     }
     newWindow('main');
+    log('Click someone to watch their conversation.<br>');
 
     function selectWindow(name) {
         if(!windows[name]) {
@@ -161,7 +195,9 @@ function doit() {
         if(clientID) {
             listenToID[clientID] = [clientID];
 
-            log('Listening to ' + clientID + '<br>', clientID);
+            log('Listening to ', clientID);
+            log(clickableID2(clientID), clientID);
+            log('<br>', clientID);
         }
     }
 
@@ -171,18 +207,31 @@ function doit() {
 
             // Locate their partner
             findPeer(clientID, function(np, theirID) {
-                console.log('yes');
-                log('Listening to ' + clientID + '\'s partner: ' + theirID + '<br>', clientID);
+                log('Listening to ', clientID);
+                log(clickableID2(clientID), clientID);
+                log('\'s partner: ', clientID)
+                log(clickableID2(theirID), clientID);
+                log('<br>', clientID);
                 listenToID[theirID] = clientID;
             });
 
-            log('Listening to ' + clientID + '<br>', clientID);
+            log('Click someone to send that person a message.,br>');
+            log('Listening to ', clientID);
+            log(clickableID2(clientID), clientID);
+            log('<br>', clientID);
         }
     }
 
     function clickableID(clientID) {
         return jQuery('<a>').attr('href','#').text(clientID).click(function() {
             selectWindow(clientID);
+        });
+    }
+
+    function clickableID2(clientID) {
+        return jQuery('<a>').attr('href','#').text(clientID).click(function() {
+            jQuery('#chatClientID').val(clientID);
+            jQuery('#chatClientMSG').focus();
         });
     }
 
@@ -212,7 +261,8 @@ function doit() {
             log((characterMap[clientID] ? (' (' + characterMap[clientID] + ')') : '') + ': ' + g.data + '<br>');
 
             if(listenToID[clientID]) {
-                log(clientID + (characterMap[clientID] ? (' (' + characterMap[clientID] + ')') : '') + ': ' + g.data + '<br>', listenToID[clientID]);
+                log(clickableID2(clientID), clientID);
+                log((characterMap[clientID] ? (' (' + characterMap[clientID] + ')') : '') + ': ' + g.data + '<br>', listenToID[clientID]);
             }
 
             if(neededPeers[g.data]) {
