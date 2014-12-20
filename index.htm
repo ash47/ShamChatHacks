@@ -1,0 +1,233 @@
+<html>
+<head>
+<script src="http://static.shamchat.com/faye.js" type="text/javascript"></script>
+<script src="http://ajax.googleapis.com/ajax/libs/mootools/1.4.5/mootools-yui-compressed.js" type="text/javascript"></script>
+<script src="http://ajax.googleapis.com/ajax/libs/swfobject/2.2/swfobject.js" type="text/javascript"></script>
+<script src="http://www.google.com/recaptcha/api/js/recaptcha_ajax.js" type="text/javascript"></script>
+<script src="http://static.shamchat.com/mootools_more.js" type="text/javascript"></script>
+<script src="http://static.shamchat.com/modernizr.js" type="text/javascript"></script>
+<script src="http://static.shamchat.com/javascript.js" type="text/javascript"></script>
+<script src="http://code.jquery.com/jquery-1.11.2.min.js" type="text/javascript"></script>
+<style>
+.sexyWindow {
+    height: 100%;
+    overflow-y: scroll;
+    font-family: monospace;
+}
+
+.mainContainer {
+    float: left;
+}
+#windowSelector {
+    float: right;
+}
+</style>
+</head>
+<body>
+<div id="msgLog" class="mainContainer"></div>
+<div id="windowSelector"><h4>Windows</h4></div>
+</body>
+</html>
+
+<script type="text/javascript">
+// Ensure no conflicts
+jQuery.noConflict();
+
+var ourClient;
+var server = 'bee1.shamchat.com';
+function heyItsMeTheIFrame(server, client) {
+    ourClient = client;
+}
+
+// Load a client
+$(document.body).grab(new Element("iframe", {
+    src: "http://" + server + "/iframe.html",
+    width: 0,
+    height: 0,
+    frameBorder: 0,
+    style: "display:none;"
+}));
+
+var windows = {};
+function newWindow(name) {
+    windows[name] = jQuery('<div class="sexyWindow">');
+
+    var clicker = jQuery('<a>').attr('href','#').click(function() {
+        selectWindow(name);
+    }).text(name);
+
+    jQuery('#windowSelector').append(clicker);
+    jQuery('#windowSelector').append('<br>');
+
+    if(name != 'main') {
+        listenToChat(name);
+    }
+}
+newWindow('main');
+
+function selectWindow(name) {
+    if(!windows[name]) {
+        newWindow(name);
+    }
+
+    jQuery('#msgLog').empty();
+    jQuery('#msgLog').append(windows[name]);
+}
+selectWindow('main');
+
+function log(msg, window) {
+    if(!window) window = 'main';
+
+    // Grab it
+    var div = windows[window];
+
+    // Scroll detection
+    var shouldScroll = false;
+    if(div.scrollTop() + div.innerHeight() + 10 >= div.prop('scrollHeight')) {
+        shouldScroll = true;
+    }
+
+    // Add message
+    div.append(msg);
+
+    // Scroll to the bottom:
+    if(shouldScroll) {
+        div.scrollTop(div.prop('scrollHeight'));
+    }
+}
+
+function sendMessage(client, msg) {
+    // Ensure we have a client
+    if(!ourClient) return;
+
+    // Pack ans send message
+    offWithItsHeader(new ourClient.Request({
+        url: getRequestURL(server, "/send"),
+        data: {
+            msg: msg,
+            id: client
+        }
+    })).send()
+};
+
+function sendDisconnect(client) {
+    // Ensure we have a client
+    if(!ourClient) return;
+
+    // Pack ans send message
+    offWithItsHeader(new ourClient.Request({
+        url: getRequestURL(server, "/disconnect"),
+        data: {
+            id: client
+        }
+    })).send()
+};
+
+function makeid() {
+    var text = "";
+    var possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+
+    for( var i=0; i < 10; i++ )
+        text += possible.charAt(Math.floor(Math.random() * possible.length));
+
+    return text;
+}
+
+// Searches for a peer
+var neededPeers = {};
+function findPeer(clientID, callback) {
+    var ourID = makeid();
+    neededPeers[ourID] = {
+        clientID: clientID,
+        callback: callback
+    }
+    sendMessage(clientID, ourID);
+}
+
+var listenToID = {};
+function listenTo(clientID) {
+    if(clientID) {
+        listenToID[clientID] = [clientID];
+
+        log('Listening to ' + clientID + '<br>', clientID);
+    }
+}
+
+function listenToChat(clientID) {
+    if(clientID) {
+        listenToID[clientID] = clientID;
+
+        // Locate their partner
+        findPeer(clientID, function(np, theirID) {
+            log('Listening to ' + clientID + '\'s partner: ' + theirID + '<br>', clientID);
+            listenToID[theirID] = clientID;
+        });
+
+        log('Listening to ' + clientID + '<br>', clientID);
+    }
+}
+
+function clickableID(clientID) {
+    return jQuery('<a>').attr('href','#').text(clientID).click(function() {
+        selectWindow(clientID);
+    });
+}
+
+// Maps IDs to names
+characterMap = {};
+
+var ourFaye = new Faye.Client('http://bee1.shamchat.com/faye');
+ourFaye.addExtension({
+    incoming:function(message, callback){
+        if(message.data){
+            message.data.channel = message.channel
+        };callback(message);
+    }
+});
+ourFaye.disable("autodisconnect");
+ourFaye.subscribe('/*', function(g){
+    var clientID = g.channel.substring(1);
+
+    // Autosend a message
+    var replyMessage = 'kBye!';
+    if(g.event == 'chat') {
+        if(g.data != replyMessage) {
+            //sendMessage(clientID, replyMessage);
+        }
+
+        log(clickableID(clientID));
+        log((characterMap[clientID] ? (' (' + characterMap[clientID] + ')') : '') + ': ' + g.data + '<br>');
+
+        if(listenToID[clientID]) {
+            log(clientID + (characterMap[clientID] ? (' (' + characterMap[clientID] + ')') : '') + ': ' + g.data + '<br>', listenToID[clientID]);
+        }
+
+        if(neededPeers[g.data]) {
+            var np = neededPeers[g.data];
+            neededPeers[g.data] = null;
+
+            if (typeof np.callback === "function") {
+                np.callback(np, clientID);
+            } else {
+                log(neededPeers[g.data].clientID + ' IS CONNECTED TO ' + clientID + '<br>');
+            }
+        }
+    }
+
+    if(g.event == 'connect') {
+        characterMap[clientID] = g.otherCharacter;
+    }
+
+    if(g.event == 'disconnect') {
+        if(listenToID[clientID]) {
+            log(clientID + (characterMap[clientID] ? (' (' + characterMap[clientID] + ')') : '') + ' has disconnected! <br>', listenToID[clientID]);
+        }
+
+        // Free memory
+        delete characterMap[clientID];
+    }
+
+    //sendDisconnect(clientID);
+}, function(e){});
+
+</script>
