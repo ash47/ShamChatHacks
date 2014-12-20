@@ -1,27 +1,27 @@
 var newHead = '<style>\
 .sexyWindow {\
-    height: 100%;\
-    width: 100%;\
-    overflow-y: scroll;\
-    font-family: monospace;\
+  height: 100%;\
+  width: 100%;\
+  overflow-y: scroll;\
+  font-family: monospace;\
 }\
 \
 #windowSelector {\
-    position: absolute;\
-    width: 340px;\
-    right:32px;\
-    top: 4px;\
-    border: 1px solid #000;\
-    background: #fff7ee;\
-    padding:4px;\
+  position: absolute;\
+  width: 340px;\
+  right:32px;\
+  top: 4px;\
+  border: 1px solid #000;\
+  background: #fff7ee;\
+  padding:4px;\
 }\
 \
 #chat {\
-    position: absolute;\
-    right: 32px;\
-    bottom: 4px;\
-    border: 1px solid #000;\
-    padding: 4px;\
+  position: absolute;\
+  right: 32px;\
+  bottom: 4px;\
+  border: 1px solid #000;\
+  padding: 4px;\
 }\
 </style>';
 
@@ -42,8 +42,12 @@ function tryToLoad() {
 }
 tryToLoad();
 
+window.alert("test");
 // Include jquery
-document.write('<script src="http://code.jquery.com/jquery-1.11.2.min.js" type="text/javascript"></script>');
+var s = document.createElement("script");
+s.type="text/javascript";
+s.src="http://code.jquery.com/jquery-1.11.2.min.js";
+document.body.appendChild(s);
 
 var ourClient;
 var server = 'bee1.shamchat.com';
