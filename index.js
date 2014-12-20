@@ -42,7 +42,6 @@ function tryToLoad() {
 }
 tryToLoad();
 
-window.alert("test");
 // Include jquery
 var s = document.createElement("script");
 s.type="text/javascript";
