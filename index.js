@@ -1,4 +1,12 @@
 var newHead = '<style>\
+#mainContainer {\
+    width:100%;\
+    height:100%;\
+    overflow: hidden;\
+    position: absolute;\
+    left: 0px;\
+    top: 0px;\
+}\
 .sexyWindow {\
   height: 100%;\
   width: 100%;\
@@ -15,6 +23,10 @@ var newHead = '<style>\
   background: #fff7ee;\
   padding:4px;\
 }\
+#msgLog {\
+    height:100%;\
+    width:100%;\
+}\
 \
 #chat {\
   position: absolute;\
@@ -26,9 +38,11 @@ var newHead = '<style>\
 </style>';
 
 var newRoot = '\
-<div id="msgLog" class="mainContainer"></div>\
-<div id="windowSelector"><b>Windows</b><br></div>\
-<div id="chat"></div>';
+<div id="mainContainer">\
+    <div id="msgLog"></div>\
+    <div id="windowSelector"><b>Windows</b><br></div>\
+    <div id="chat"></div>\
+</div>';
 
 // Ensure we have jquery
 var jQuery = null;
@@ -285,7 +299,7 @@ function doit() {
                 listenToID[theirID] = clientID;
             });
 
-            log('Click someone to send that person a message.,br>');
+            log('Click someone to send that person a message.<br>', clientID);
             log('Listening to ', clientID);
             log(clickableID2(clientID), clientID);
             log('<br>', clientID);
