@@ -44,15 +44,31 @@ var newRoot = '\
     <div id="chat"></div>\
 </div>';
 
+var ourClient = null;
+var topLevelServer = '.shamchat.com';
+var server = 'bee2' + topLevelServer;
+function heyItsMeTheIFrame(server, client) {
+    ourClient = client;
+}
+
+// Load a client
+$(document.body).grab(new Element("iframe", {
+    src: "http://" + server + "/iframe.html",
+    width: 0,
+    height: 0,
+    frameBorder: 0,
+    style: "display:none;"
+}));
+
 // Ensure we have jquery
 var jQuery = null;
 function tryToLoad() {
-    if(jQuery == null) {
+    if(jQuery == null || ourClient == null) {
         setTimeout(tryToLoad, 100);
         return;
     }
 
-    doit();
+    findServers();
 }
 tryToLoad();
 
@@ -62,13 +78,39 @@ s.type="text/javascript";
 s.src="http://code.jquery.com/jquery-1.11.2.min.js";
 document.body.appendChild(s);
 
-var ourClient;
-var server = 'bee1.shamchat.com';
-function heyItsMeTheIFrame(server, client) {
-    ourClient = client;
-}
-
 var sendCapcha;
+
+function findServers() {
+    offWithItsHeader(new ourClient.Request.JSON({
+        url: getRequestURL(server, "/whatsup"),
+        data: {
+            id: this.clientID
+        },
+        onSuccess: function(data) {
+            if (!data) {
+                return
+            }
+
+            // Tell them which servers are there
+            console.log('Found the following servers: ' + data.servers.join());
+
+            // Grab an answer
+            var answer
+            while(!answer) {
+                answer = prompt('Please select a server', data.servers[0]);
+            }
+
+            // Update the server
+            server = answer + topLevelServer;
+
+            // Load
+            doit();
+        },
+        onFailure: function() {
+            console.log('Failed to locate servers, I am a SAD PANDA!');
+        }
+    })).send()
+}
 
 function doit() {
     // Ensure no conflicts
@@ -101,15 +143,6 @@ function doit() {
         if(msg != '') {
             sendMessage(toSend, msg);
         }
-    }));
-
-    // Load a client
-    $(document.body).grab(new Element("iframe", {
-        src: "http://" + server + "/iframe.html",
-        width: 0,
-        height: 0,
-        frameBorder: 0,
-        style: "display:none;"
     }));
 
     var windows = {};
@@ -322,7 +355,7 @@ function doit() {
     // Maps IDs to names
     characterMap = {};
 
-    var ourFaye = new Faye.Client('http://bee1.shamchat.com/faye');
+    var ourFaye = new Faye.Client('http://'+server+'/faye');
     ourFaye.addExtension({
         incoming:function(message, callback){
             if(message.data){
