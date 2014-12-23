@@ -52,19 +52,27 @@ function heyItsMeTheIFrame(server, client) {
 }
 
 // Load a client
-$(document.body).grab(new Element("iframe", {
-    src: "http://" + server + "/iframe.html",
-    width: 0,
-    height: 0,
-    frameBorder: 0,
-    style: "display:none;"
-}));
+function newClient() {
+    $(document.body).grab(new Element("iframe", {
+        src: "http://" + server + "/iframe.html",
+        width: 0,
+        height: 0,
+        frameBorder: 0,
+        style: "display:none;"
+    }));
+}
+newClient();
 
 // Ensure we have jquery
 var jQuery = null;
 function tryToLoad() {
+    if(jQuery != null) {
+        // Ensure no conflicts
+        jQuery.noConflict();
+    }
+
     if(jQuery == null || ourClient == null) {
-        setTimeout(tryToLoad, 100);
+        setTimeout(tryToLoad, 1);
         return;
     }
 
@@ -104,7 +112,7 @@ function findServers() {
             server = answer + topLevelServer;
 
             // Load
-            doit();
+            setTimeout(doit, 1);
         },
         onFailure: function() {
             console.log('Failed to locate servers, I am a SAD PANDA!');
@@ -113,9 +121,6 @@ function findServers() {
 }
 
 function doit() {
-    // Ensure no conflicts
-    jQuery.noConflict();
-
     jQuery(document.documentElement).children().each(function() {
         jQuery(this).hide();
     });
@@ -408,5 +413,7 @@ function doit() {
         }
 
         //sendDisconnect(clientID);
-    }, function(e){});
+    }, function(e){}).then(function() {
+        newClient();
+    });
 }
