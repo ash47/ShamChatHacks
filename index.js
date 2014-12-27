@@ -18,10 +18,12 @@ var newHead = '<style>\
   position: absolute;\
   width: 340px;\
   right:32px;\
-  top: 4px;\
+  top: 0px;\
+  bottom: 48px;\
   border: 1px solid #000;\
   background: #fff7ee;\
   padding:4px;\
+  overflow-y: scroll;\
 }\
 #msgLog {\
     height:100%;\
@@ -151,14 +153,14 @@ function doit() {
     }));
 
     var windows = {};
-    function newWindow(name) {
+    function newWindow(name, fn) {
         windows[name] = jQuery('<div class="sexyWindow">');
 
         var con = jQuery('<span>');
 
         var clicker = jQuery('<a>').attr('href','#').click(function() {
             selectWindow(name);
-        }).text(name);
+        }).text(fn);
 
         if(name != 'main') {
             con.append(jQuery('<a>').attr('href','#').click(function() {
@@ -172,9 +174,7 @@ function doit() {
         con.append(clicker);
         con.append('<br>');
 
-        if(name != 'main') {
-            listenToChat(name);
-        }
+        return con;
     }
     newWindow('main');
     log('Click someone to watch their conversation.<br>');
@@ -194,19 +194,6 @@ function doit() {
         if(name == null) name = '';
 
         return ' (<pre style="display:inline-block;width:100px;overflow:hidden;margin:0px;padding:0px;">' + name + '</pre>)';
-    }
-
-    // Closes a tab
-    function closeTab(name) {
-        if(windows[name]) {
-            windows[name].dispose();
-        }
-
-        for(var key in listenToID) {
-            if(listenToID[key] == name) {
-                delete listenToID[key];
-            }
-        }
     }
 
     function log(msg, window) {
@@ -312,38 +299,6 @@ function doit() {
         sendMessage(clientID, ourID);
     }
 
-    var listenToID = {};
-    function listenTo(clientID) {
-        if(clientID) {
-            listenToID[clientID] = [clientID];
-
-            log('Listening to ', clientID);
-            log(clickableID2(clientID), clientID);
-            log('<br>', clientID);
-        }
-    }
-
-    function listenToChat(clientID) {
-        if(clientID) {
-            listenToID[clientID] = clientID;
-
-            // Locate their partner
-            findPeer(clientID, function(np, theirID) {
-                log('Listening to ', clientID);
-                log(clickableID2(clientID), clientID);
-                log('\'s partner: ', clientID)
-                log(clickableID2(theirID), clientID);
-                log('<br>', clientID);
-                listenToID[theirID] = clientID;
-            });
-
-            log('Click someone to send that person a message.<br>', clientID);
-            log('Listening to ', clientID);
-            log(clickableID2(clientID), clientID);
-            log('<br>', clientID);
-        }
-    }
-
     function clickableID(clientID) {
         return jQuery('<a>').attr('href','#').text(clientID).click(function() {
             selectWindow(clientID);
@@ -359,6 +314,7 @@ function doit() {
 
     // Maps IDs to names
     characterMap = {};
+    liveChats = {};
 
     var ourFaye = new Faye.Client('http://'+server+'/faye');
     ourFaye.addExtension({
@@ -373,20 +329,7 @@ function doit() {
         var clientID = g.channel.substring(1);
 
         // Autosend a message
-        var replyMessage = 'kBye!';
         if(g.event == 'chat') {
-            if(g.data != replyMessage) {
-                //sendMessage(clientID, replyMessage);
-            }
-
-            log(clickableID(clientID));
-            log(sexyName(characterMap[clientID]) + ': ' + g.data + '<br>');
-
-            if(listenToID[clientID]) {
-                log(clickableID2(clientID), listenToID[clientID]);
-                log(sexyName(characterMap[clientID]) + ': ' + g.data + '<br>', listenToID[clientID]);
-            }
-
             if(neededPeers[g.data]) {
                 var np = neededPeers[g.data];
                 neededPeers[g.data] = null;
@@ -396,20 +339,67 @@ function doit() {
                 } else {
                     log(neededPeers[g.data].clientID + ' IS CONNECTED TO ' + clientID + '<br>');
                 }
+
+                return;
+            }
+
+            log(clickableID(clientID));
+            log(sexyName(characterMap[clientID]) + ': ' + g.data + '<br>');
+
+            if(liveChats[clientID]) {
+                log(clickableID2(clientID), liveChats[clientID].window);
+                log(sexyName(characterMap[clientID]) + ': ' + g.data + '<br>', liveChats[clientID].window);
             }
         }
 
         if(g.event == 'connect') {
-            characterMap[clientID] = g.otherCharacter;
+            //characterMap[clientID] = g.otherCharacter;
+
+            findPeer(clientID, function(np, theirID) {
+                characterMap[theirID] = g.otherCharacter;
+
+                var a = clientID;
+                var b = theirID;
+                if(theirID < clientID) {
+                    b = clientID;
+                    a = theirID;
+                }
+
+                if(characterMap[a] && characterMap[b]) {
+                    if(liveChats[a]) {
+                        liveChats[a].con.remove();
+                    }
+
+                    var chatData = {
+                        a: a,
+                        b: b,
+                        window: a+'_'+b
+                    };
+
+                    liveChats[a] = chatData;
+                    liveChats[b] = chatData;
+
+                    chatData.con = newWindow(chatData.window, characterMap[a] + ' & ' + characterMap[b]);
+
+                    log('Click someone to send a message as that person.<br>', chatData.window);
+                }
+            });
         }
 
         if(g.event == 'disconnect') {
-            if(listenToID[clientID]) {
-                log(clientID + (characterMap[clientID] ? (' (' + characterMap[clientID] + ')') : '') + ' has disconnected! <br>', listenToID[clientID]);
-            }
+            // Cleanup
+            var chat = liveChats[clientID];
+            if(chat) {
+                // Log it
+                log(clientID + sexyName(characterMap[clientID]) + ' has disconnected! <br>', liveChats[clientID].window);
 
-            // Free memory
-            delete characterMap[clientID];
+                liveChats[chat.a] = null;
+                liveChats[chat.b] = null;
+                chat.con.remove();
+
+                characterMap[chat.a] = null;
+                characterMap[chat.b] = null;
+            }
         }
 
         //sendDisconnect(clientID);
