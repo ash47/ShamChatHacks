@@ -363,17 +363,13 @@ function doit() {
             };callback(message);
         }
     });
+
     ourFaye.disable("autodisconnect");
     ourFaye.subscribe('/*', function(g){
         var clientID = g.channel.substring(1);
 
         // Autosend a message
-        var replyMessage = 'kBye!';
         if(g.event == 'chat') {
-            if(g.data != replyMessage) {
-                //sendMessage(clientID, replyMessage);
-            }
-
             log(clickableID(clientID));
             log(sexyName(characterMap[clientID]) + ': ' + g.data + '<br>');
 
@@ -408,5 +404,7 @@ function doit() {
         }
 
         //sendDisconnect(clientID);
-    }, function(e){});
+    }).then(function() {
+        console.log('Listening successfully!');
+    });
 }
