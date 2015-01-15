@@ -5,6 +5,7 @@ Exploits for ShamChat.Com that allow you to watch all chats, monitor people, and
 
 ###Patched###
  - This appears to have been patched :(
+ - You can no longer subscribe to the /* (wildcard) channel, so you cant get all chats, doh!
 
 ###How do I use this?###
  - Open index.js, copy all the code from there
